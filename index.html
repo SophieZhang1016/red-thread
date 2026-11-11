@@ -11,7 +11,7 @@
 const $=id=>document.getElementById(id);
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const e=escapeHTML;
-const fresh=()=>({started:false,mode:'Not set',age:'24–30',area:'Hong Kong Island',goal:'Long-term',matched:false,shared:false,visibility:'Private',context:false,bio:'I’m happiest on slow Sundays.',chat:{David:[],Maya:[],Alex:[]},unlocked:false,record:'',period:'Jan–Apr 2025',summary:'We dated briefly and decided to part ways.',scope:'Only me',claim:'',feedback:''});
+const fresh=()=>({started:false,gender:'',interestedIn:'',mode:'Not set',age:'24–30',area:'Hong Kong Island',goal:'Long-term',matched:false,shared:false,visibility:'Private',context:false,bio:'I’m happiest on slow Sundays.',chat:{David:[],Maya:[],Alex:[]},unlocked:false,record:'',period:'Jan–Apr 2025',summary:'We dated briefly and decided to part ways.',scope:'Only me',claim:'',feedback:''});
 let state=fresh();
 try{const saved=JSON.parse(localStorage.getItem('red-thread-v1'));if(saved)state={...state,...saved};}catch{}
 function save(){try{localStorage.setItem('red-thread-v1',JSON.stringify(state))}catch{}}
@@ -56,7 +56,7 @@ function render(){
  $('screen').scrollTop=page==='chat'?$('screen').scrollHeight:0;
  drawModal();
 }
-const prefsFields=()=>select('Age range','age',['18–23','24–30','31–39','40+'],state.age)+select('Location','area',['Hong Kong Island','Kowloon','New Territories','Any area'],state.area)+select('Relationship goal','goal',['Long-term','Open to exploring','Friendship'],state.goal);
+let prefsFields=()=>select('Age range','age',['18–23','24–30','31–39','40+'],state.age)+select('Location','area',['Hong Kong Island','Kowloon','New Territories','Any area'],state.area)+select('Relationship goal','goal',['Long-term','Open to exploring','Friendship'],state.goal);
 const reading='In traditional BaZi, Yang Wood is associated with steady growth.';
 const views={
  welcome:()=>'<div class="emblem"><span class="heart" aria-hidden="true">♡</span><div><b>天緣巧合</b><div class="brand" style="margin-top:12px">RED THREAD</div></div></div><div class="center">'+title('Some threads are meant to cross.')+'<p>Meet people who share your relationship goals. Explore BaZi if you’re curious.</p></div>'+stack(go('Get started','age','primary'),go('I already have an account','signin')),
@@ -211,7 +211,7 @@ document.addEventListener('submit',event=>{
    jump('prefs');break;
   }
   case 'prefs':case 'filters':
-   for(const key of ['age','area','goal'])state[key]=d.get(key);
+   for(const key of ['age','area','goal','gender','interestedIn'])state[key]=d.get(key);
    save();if(kind==='prefs')jump('begin');else{modal='';render();toast('Filters applied')}break;
   case 'bazi':
    if(!d.has('consent')||(mode==='Full'&&!d.get('place').trim()))return;
@@ -296,6 +296,21 @@ const oldClaimHandler=actions.reset;
 actions.reset=()=>{oldClaimHandler();pickedTopic=null;topicRound=0};
 render();
 </script>
-</html>
+<script>
+const genderSelect=(label,name,options,value)=>'<label>'+label+'<select name="'+name+'" required><option value="" disabled '+(!value?'selected':'')+'>Choose an option</option>'+options.map(x=>'<option value="'+e(x)+'" '+(x===value?'selected':'')+'>'+e(x)+'</option>').join('')+'</select></label>';
+function genderFields(){return genderSelect('Your gender','gender',['Woman','Man','Non-binary','Prefer not to say'],state.gender)+genderSelect('Who would you like to meet?','interestedIn',['Women','Men','Non-binary people','Everyone'],state.interestedIn)+'<small>You can change these preferences anytime.</small>'}
+const originalPrefsFields=prefsFields; prefsFields=()=>genderFields()+originalPrefsFields(); const genderDiscover=views.discover,genderMap=views.map,genderChannel=views.channel,genderProfile=views.profile;
+function canSeeDavid(){return ['Men','Everyone'].includes(state.interestedIn)}
+function genderPrompt(){return title('Who would you like to meet?')+card('Set your gender and dating preferences to personalize discovery.')+go('Set dating preferences','prefs','primary wide')}
+views.discover=()=>!state.gender||!state.interestedIn?genderPrompt():canSeeDavid()?genderDiscover():title('Discover')+card('<h3>No matching demo profiles yet</h3><p>Your preference is '+e(state.interestedIn)+'. More sample profiles will appear as the demo expands.</p>')+b('Edit preferences','filters','wide');
+views.map=()=>!state.gender||!state.interestedIn?genderPrompt():canSeeDavid()?genderMap():title('Nearby')+card('No sample profiles match your gender preference in this demo.')+b('Edit preferences','filters','wide');
+views.channel=()=>!state.gender||!state.interestedIn?genderPrompt():state.unlocked&&state.interestedIn!=='Everyone'?title('Serious Commitment')+'<span class="chip jade">Unlocked · Demo</span>'+card('Jamie’s gender is unspecified in this sample. There are currently no verified sample profiles for your selected preference.')+b('Edit preferences','filters','wide'):genderChannel();
+views.profile=()=>genderProfile()+card('<h3>Gender & dating preferences</h3>'+line('Your gender',e(state.gender||'Not set'))+line('Interested in',e(state.interestedIn||'Not set'))+b('Edit preferences','filters','wide'));
+const genderLike=actions.like;
+actions.like=()=>{if(!state.gender||!state.interestedIn){jump('prefs');return}if(!canSeeDavid())return;genderLike()};
+if(state.started&&(!state.gender||!state.interestedIn))page='prefs';
+render();
+
+</script></html>
 
 
